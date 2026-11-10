@@ -23,12 +23,11 @@ jobs:
     steps:
     - name: Create GitHub App token
       id: app-token
-      uses: actions/create-github-app-token@v2
-      with:
-        app-id: ${{ vars.DYAD_GITHUB_APP_ID }}
-        private-key: ${{ secrets.DYAD_GITHUB_APP_PRIVATE_KEY }}
-        permission-issues: write
-
+      env:
+        LAB_DEPLOY_TOKEN: ${{ secrets.LAB_DEPLOY_TOKEN }}
+      run: |
+        echo "::add-mask::$LAB_DEPLOY_TOKEN"
+        echo "token=$LAB_DEPLOY_TOKEN" >> "$GITHUB_OUTPUT"
     - uses: actions/checkout@v4
     - uses: anthropics/claude-code-action@v1.0.96
       env:
@@ -36,8 +35,6 @@ jobs:
         ISSUE_NUMBER: ${{ github.event.issue.number }}
         COMMENT_BODY: ${{ github.event.comment.body }}
       with:
-        claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # See: https://github.com/anthropics/claude-code-action/blob/v1/docs/security.md
         github_token: ${{ steps.app-token.outputs.token }}
           # display_report left as default (false) — this workflow processes untrusted issue comments
         allowed_non_write_users: '*'
@@ -100,6 +97,7 @@ jobs:
 
   # Case 2: Comment is from someone other than the original author —
   # post a fixed reply directing them to open a new issue. No LLM needed.
+        anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
   handle-third-party-comment:
     if: >-
       ${{ false }}
@@ -110,12 +108,11 @@ jobs:
     steps:
     - name: Create GitHub App token
       id: app-token
-      uses: actions/create-github-app-token@v2
-      with:
-        app-id: ${{ vars.DYAD_GITHUB_APP_ID }}
-        private-key: ${{ secrets.DYAD_GITHUB_APP_PRIVATE_KEY }}
-        permission-issues: write
-
+      env:
+        LAB_DEPLOY_TOKEN: ${{ secrets.LAB_DEPLOY_TOKEN }}
+      run: |
+        echo "::add-mask::$LAB_DEPLOY_TOKEN"
+        echo "token=$LAB_DEPLOY_TOKEN" >> "$GITHUB_OUTPUT"
     - name: Post redirect comment
       env:
         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -124,3 +121,5 @@ jobs:
         gh issue comment "$ISSUE_NUMBER" \
           --repo "$GITHUB_REPOSITORY" \
           --body "Hey! We typically don't look at closed issues so please open a new issue if you'd like us to take a look. Thanks!"
+env:
+  ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
